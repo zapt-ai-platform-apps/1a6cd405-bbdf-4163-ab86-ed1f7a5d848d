@@ -1,9 +1,9 @@
-import { createSignal, createEffect, onMount, Show } from 'solid-js'
+import { createSignal, onMount, onCleanup, Show } from 'solid-js'
 import { supabase, createEvent } from './supabaseClient'
 import { Auth } from '@supabase/auth-ui-solid'
 import { ThemeSupa } from '@supabase/auth-ui-shared'
 import { SolidMarkdown } from "solid-markdown"
-import pdfjsLib from 'pdfjs-dist'
+import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf'
 import mammoth from 'mammoth'
 import XLSX from 'xlsx'
 
@@ -23,10 +23,10 @@ function App() {
     }
   }
 
-  onMount(checkUserSignedIn)
+  onMount(() => {
+    checkUserSignedIn()
 
-  createEffect(() => {
-    const { data: authListener } = supabase.auth.onAuthStateChange((_, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
       if (session?.user) {
         setUser(session.user)
         setCurrentPage('homePage')
@@ -36,9 +36,9 @@ function App() {
       }
     })
 
-    return () => {
-      authListener?.unsubscribe()
-    }
+    onCleanup(() => {
+      subscription?.unsubscribe()
+    })
   })
 
   const handleFileChange = async (event) => {
@@ -57,6 +57,12 @@ function App() {
       if (uploadedFile.type === 'application/pdf') {
         // PDF file
         const arrayBuffer = await uploadedFile.arrayBuffer()
+
+        pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+          'pdfjs-dist/build/pdf.worker.min.js',
+          import.meta.url,
+        ).toString()
+
         const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
 
         let pageTexts = []
@@ -146,7 +152,7 @@ function App() {
           <div class="mb-6">
             <label class="block text-lg font-medium mb-2">Upload a document (PDF, Word, Excel):</label>
             <div class="flex items-center">
-              <label class="flex items-center px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 cursor-pointer">
+              <label class={`flex items-center px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 ${loading() ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
                 <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
                   <path d="M16.88 9.94l-1.41-1.42-4.47 4.47V2h-2v10.99l-4.47-4.47-1.41 1.42 6 6 .01.01 6-6z" />
                 </svg>
@@ -156,6 +162,7 @@ function App() {
                   accept=".pdf,.doc,.docx,.xls,.xlsx"
                   class="hidden"
                   onChange={handleFileChange}
+                  disabled={loading()}
                 />
               </label>
             </div>
@@ -178,7 +185,7 @@ function App() {
             </div>
           </Show>
           <Show when={summary()}>
-            <div class="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <div class="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200 h-full">
               <h3 class="text-xl font-semibold mb-2">Summary:</h3>
               <div class="text-gray-700 prose">
                 <SolidMarkdown children={summary()} />

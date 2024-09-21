@@ -1,6 +1,6 @@
 {
-  "name": "solidjs-tailwind-vite-hello-world",
-  "version": "1.0.0",
+  "name": "document-summarizer-app",
+  "version": "1.0.1",
   "description": "An app that summarizes uploaded documents",
   "scripts": {
     "dev": "vite",
