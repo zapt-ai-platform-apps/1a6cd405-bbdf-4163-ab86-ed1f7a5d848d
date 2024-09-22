@@ -26,7 +26,7 @@ function App() {
   onMount(() => {
     checkUserSignedIn()
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+    const { data: authListener } = supabase.auth.onAuthStateChange((_, session) => {
       if (session?.user) {
         setUser(session.user)
         setCurrentPage('homePage')
@@ -37,7 +37,7 @@ function App() {
     })
 
     onCleanup(() => {
-      subscription?.unsubscribe()
+      authListener?.unsubscribe()
     })
   })
 
